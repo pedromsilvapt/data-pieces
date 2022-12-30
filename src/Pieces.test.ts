@@ -30,6 +30,73 @@ test( 'Range', t => {
 } );
 
 test( 'PiecesSet', t => {
+    t.test( '#add', t => {
+        t.test( 'out of order insertion', t => {
+            const set = new PiecesSet( 6 );
+
+            set.add( 4 );
+            set.add( 0 );
+            set.add( 1 );
+            set.add( 5 );
+            set.add( 2 );
+            set.add( 3 );
+
+            t.deepEquals( Array.from( set ), [ { start: 0, end: 5 } ] );
+
+            t.end();
+        } );
+
+        t.test( 'out of order insertion with empty spaces', t => {
+            const set = new PiecesSet( 6 );
+
+            set.add( 0 );
+            set.add( 2 );
+            set.add( 5 );
+            set.add( 3 );
+
+            t.deepEquals( Array.from( set ), [ { start: 0, end: 0 }, { start: 2, end: 3 }, { start: 5, end: 5 } ] );
+
+            t.end();
+        } );
+    } );
+
+    t.test( '#has', t => {
+        t.test( 'no empty spaces', t => {
+            const set = new PiecesSet( 6 );
+
+            for ( let i = 0; i < 6; i++ ) {
+                t.equals( set.has( i ), false );
+            }
+
+            for ( let i = 0; i < 6; i++ ) set.add( i );
+
+            for ( let i = 0; i < 6; i++ ) {
+                t.equals( set.has( i ), true );
+            }
+
+            t.end();
+        } );
+
+        t.test( 'empty space at the beginning', t => {
+            const set = new PiecesSet( 6 );
+
+            for ( let i = 0; i < 6; i++ ) {
+                t.equals( set.has( i ), false );
+            }
+
+            for ( let i = 2; i < 6; i++ ) set.add( i );
+
+            for ( let i = 0; i < 2; i++ ) {
+                t.equals( set.has( i ), false );
+            }
+            for ( let i = 2; i < 6; i++ ) {
+                t.equals( set.has( i ), true );
+            }
+
+            t.end();
+        } );
+    } );
+
     t.test( '#available', t => {
         t.test( 'no empty spaces', t => {
             const set = new PiecesSet( 6 );

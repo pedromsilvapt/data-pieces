@@ -475,8 +475,8 @@ export class RBTree<T> {
         return getNodeValue( this.biggestAbove( lowerBound, included ), defaultValue );
     }
 
-    closest ( bound: T ): [ RBNode<T>, RBNode<T> ] {
-        return [ this.biggestUnder( bound, false ), this.smallestAbove( bound, false ) ];
+    closest ( bound: T, included: boolean = false ): [ RBNode<T>, RBNode<T> ] {
+        return [ this.biggestUnder( bound, included ), this.smallestAbove( bound, included ) ];
     }
 
     closestValues ( bound: T ): [ T, T ] {

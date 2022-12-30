@@ -1,6 +1,6 @@
 {
   "name": "data-pieces",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Three efficient data structures to save and traverse indexed chunks of information (like torrent blocks or HLS segments)",
   "main": "./lib/Pieces.js",
   "types": "./lib/Pieces.d.ts",

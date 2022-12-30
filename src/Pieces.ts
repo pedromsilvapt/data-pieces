@@ -304,10 +304,10 @@ export class PiecesSet extends WatchablePiecesMap {
         this.tmpRange.start = index;
         this.tmpRange.end = index;
 
-        const [ lower, upper ] = this.tree.closest( this.tmpRange );
+        const [ lower, upper ] = this.tree.closest( this.tmpRange, true );
 
-        const inLower = lower && lower.value.start <= index && lower.value.end >= index;
-        const inUpper = upper && upper.value.start <= index && upper.value.end >= index;
+        const inLower = !!( lower && lower.value.start <= index && lower.value.end >= index );
+        const inUpper = !!( upper && upper.value.start <= index && upper.value.end >= index );
 
         return inLower || inUpper;
     }
@@ -388,6 +388,10 @@ export class PiecesSet extends WatchablePiecesMap {
         limit = boundaries.intersect( limit || boundaries );
 
         return Range.invert( this.available( limit ), limit );
+    }
+
+    [ Symbol.iterator ] () {
+        return this.tree[ Symbol.iterator ]();
     }
 }
 
