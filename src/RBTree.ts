@@ -1,12 +1,18 @@
-import * as printTree from 'print-tree';
+import printTree from 'print-tree';
 
 /*
  * Implementation inspired by http://www.eternallyconfuzzled.com/tuts/datastructures/jsw_tut_rbtree.aspx,
  * specifically the insert and delete methods.
  */
 
+function getNodeValue<T> ( node: RBNode<T>, defaultValue: T = null ): T {
+    if ( node != null ) return node.value;
+
+    return defaultValue;
+}
+
 export interface Comparator<T> {
-    ( a : T, b : T ) : number;
+    ( a: T, b: T ): number;
 }
 
 export enum RBColor {
@@ -15,30 +21,30 @@ export enum RBColor {
 }
 
 export class RBNode<T> {
-    links : [ RBNode<T>, RBNode<T> ] = [ null, null ];
+    links: [ RBNode<T>, RBNode<T> ] = [ null, null ];
 
-    value : T;
-    
-    parent ?: RBNode<T>;
-    color : RBColor;
+    value: T;
 
-    get left () : RBNode<T> {
+    parent?: RBNode<T>;
+    color: RBColor;
+
+    get left (): RBNode<T> {
         return this.links[ 0 ];
     }
 
-    get right () : RBNode<T> {
+    get right (): RBNode<T> {
         return this.links[ 1 ];
     }
-    
-    set left ( value : RBNode<T> ) {
+
+    set left ( value: RBNode<T> ) {
         this.links[ 0 ] = value;
     }
 
-    set right ( value : RBNode<T> ) {
+    set right ( value: RBNode<T> ) {
         this.links[ 1 ] = value;
     }
 
-    get uncle () : RBNode<T> {
+    get uncle (): RBNode<T> {
         if ( this.parent == null ) {
             return null;
         }
@@ -46,7 +52,7 @@ export class RBNode<T> {
         return this.parent.sibling;
     }
 
-    get sibling () : RBNode<T> {
+    get sibling (): RBNode<T> {
         if ( this.parent == null ) {
             return null;
         }
@@ -58,7 +64,7 @@ export class RBNode<T> {
         }
     }
 
-    get grandparent () : RBNode<T> {
+    get grandparent (): RBNode<T> {
         if ( this.parent == null ) {
             return null;
         }
@@ -66,7 +72,14 @@ export class RBNode<T> {
         return this.parent.parent;
     }
 
-    constructor ( parent : RBNode<T>, value : T ) {
+    get depth (): number {
+        return 1 + Math.max(
+            this.right != null ? this.right.depth : 0,
+            this.left != null ? this.left.depth : 0
+        );
+    }
+
+    constructor ( parent: RBNode<T>, value: T ) {
         this.parent = parent;
         this.value = value;
 
@@ -75,17 +88,17 @@ export class RBNode<T> {
         this.color = RBColor.Red;
     }
 
-    static toString ( node : RBNode<any> ) : string {
+    static toString ( node: RBNode<any> ): string {
         if ( node == null ) {
             return "null";
         }
 
         let color = node.color == RBColor.Black ? 'B' : 'R';
 
-        return `Node( ${ color }, ${ node.value.toString() }, ${ this.toString( node.left ) }, ${ this.toString( node.right ) } )`;
+        return `Node( ${color}, ${node.value.toString()}, ${this.toString( node.left )}, ${this.toString( node.right )} )`;
     }
 
-    static getColor ( node : RBNode<any> ) : RBColor {
+    static getColor ( node: RBNode<any> ): RBColor {
         if ( node == null ) {
             return RBColor.Black;
         }
@@ -95,25 +108,35 @@ export class RBNode<T> {
 }
 
 export class RBTree<T> {
-    root : RBNode<T>;
+    root: RBNode<T>;
 
-    comparator : Comparator<T>;
+    comparator: Comparator<T>;
 
-    constructor ( comparator : Comparator<T> ) {
+    size: number = 0;
+
+    get depth (): number {
+        if ( this.root == null ) {
+            return 0;
+        }
+
+        return this.root.depth;
+    }
+
+    constructor ( comparator: Comparator<T> ) {
         this.comparator = comparator;
 
         this.root = null;
     }
 
-    protected isRed ( node : RBNode<T> ) : boolean {
+    protected isRed ( node: RBNode<T> ): boolean {
         return node != null && node.color == RBColor.Red;
     }
 
-    protected isBlack ( node : RBNode<T> ) : boolean {
+    protected isBlack ( node: RBNode<T> ): boolean {
         return !this.isRed( node );
     }
 
-    protected rotateLeft ( root : RBNode<T> ) : RBNode<T> {
+    protected rotateLeft ( root: RBNode<T> ): RBNode<T> {
         const save = root.right;
 
         root.right = save.left;
@@ -129,13 +152,13 @@ export class RBTree<T> {
         return save;
     }
 
-    protected rotateRightLeft ( root : RBNode<T> ) : RBNode<T> {
+    protected rotateRightLeft ( root: RBNode<T> ): RBNode<T> {
         root.right = this.rotateRight( root.right );
 
         return this.rotateLeft( root );
     }
 
-    protected rotateRight ( root : RBNode<T> ) : RBNode<T> {
+    protected rotateRight ( root: RBNode<T> ): RBNode<T> {
         const save = root.left;
 
         root.left = save.right;
@@ -150,17 +173,17 @@ export class RBTree<T> {
 
         return save;
     }
-    
-    protected rotateLeftRight ( root : RBNode<T> ) : RBNode<T> {
+
+    protected rotateLeftRight ( root: RBNode<T> ): RBNode<T> {
         root.left = this.rotateLeft( root.left );
 
         return this.rotateRight( root );
     }
 
-    protected insertRecursive ( root : RBNode<T>, value : T ) : RBNode<T> {
+    protected insertRecursive ( root: RBNode<T>, value: T ): RBNode<T> {
         if ( root == null ) {
             root = new RBNode( root, value );
-            
+
             return root;
         } else if ( this.comparator( root.value, value ) > 0 ) {
             root.left = this.insertRecursive( root.left, value );
@@ -172,7 +195,7 @@ export class RBTree<T> {
                     root.left.color = RBColor.Black;
                     root.right.color = RBColor.Black;
                 } else {
-                    if (this.isRed( root.left.left ) ) {
+                    if ( this.isRed( root.left.left ) ) {
                         root = this.rotateRight( root );
                     } else if ( this.isRed( root.left.right ) ) {
                         root = this.rotateLeftRight( root );
@@ -189,7 +212,7 @@ export class RBTree<T> {
                     root.left.color = RBColor.Black;
                     root.right.color = RBColor.Black;
                 } else {
-                    if (this.isRed( root.right.right ) ) {
+                    if ( this.isRed( root.right.right ) ) {
                         root = this.rotateLeft( root );
                     } else if ( this.isRed( root.right.left ) ) {
                         root = this.rotateRightLeft( root );
@@ -201,7 +224,9 @@ export class RBTree<T> {
         return root;
     }
 
-    insert ( value : T ) {
+    insert ( value: T ) {
+        this.size++;
+
         this.root = this.insertRecursive( this.root, value );
         if ( this.root && this.root.left ) this.root.left.parent = this.root;
         if ( this.root && this.root.right ) this.root.right.parent = this.root;
@@ -209,7 +234,7 @@ export class RBTree<T> {
         this.root.color = RBColor.Red;
     }
 
-    protected rotate ( node : RBNode<T>, dir : number ) : RBNode<T> {
+    protected rotate ( node: RBNode<T>, dir: number ): RBNode<T> {
         if ( dir == 0 ) {
             return this.rotateLeft( node );
         } else {
@@ -217,7 +242,7 @@ export class RBTree<T> {
         }
     }
 
-    protected rotateDouble ( node : RBNode<T>, dir : number ) : RBNode<T> {
+    protected rotateDouble ( node: RBNode<T>, dir: number ): RBNode<T> {
         if ( dir == 0 ) {
             return this.rotateRightLeft( node );
         } else {
@@ -225,11 +250,11 @@ export class RBTree<T> {
         }
     }
 
-    delete ( value : T ) {
+    delete ( value: T ) {
         if ( this.root != null ) {
-            const head : RBNode<T> = new RBNode( null, null );
-            let q : RBNode<T>, p : RBNode<T>, g : RBNode<T>;
-            let f : RBNode<T>;
+            const head: RBNode<T> = new RBNode( null, null );
+            let q: RBNode<T>, p: RBNode<T>, g: RBNode<T>;
+            let f: RBNode<T>;
 
             let dir = 1;
             let ord;
@@ -240,7 +265,7 @@ export class RBTree<T> {
             q.links[ 1 ] = this.root;
 
             /* Search and push a red down */
-            while ( q.links[dir] != null ) {
+            while ( q.links[ dir ] != null ) {
                 let last = dir;
 
                 /* Update helpers */
@@ -252,13 +277,14 @@ export class RBTree<T> {
                 /* Save found node */
                 if ( ord == 0 ) {
                     f = q;
+                    this.size--;
                 }
 
                 /* Push the red node down */
                 if ( this.isBlack( q ) && this.isBlack( q.links[ dir ] ) ) {
                     if ( this.isRed( q.links[ 1 - dir ] ) ) {
-                        
-                        p = p.links[last] = this.rotate( q, dir );
+
+                        p = p.links[ last ] = this.rotate( q, dir );
                     } else if ( this.isBlack( q.links[ 1 - dir ] ) ) {
                         const s = p.links[ 1 - last ];
                         // struct jsw_node *s = p->link[!last];
@@ -291,7 +317,7 @@ export class RBTree<T> {
             /* Replace and remove if found */
             if ( f != null ) {
                 f.value = q.value;
-                p.links[ p.links[ 1 ] == q ? 1 : 0 ] = q.links[ q.links[ 0 ] == null ? 1 : 0];
+                p.links[ p.links[ 1 ] == q ? 1 : 0 ] = q.links[ q.links[ 0 ] == null ? 1 : 0 ];
             }
 
             /* Update root and make it black */
@@ -305,9 +331,10 @@ export class RBTree<T> {
 
     clear () {
         this.root = null;
+        this.size = 0;
     }
 
-    find ( value : T ) : RBNode<T> {
+    find ( value: T ): RBNode<T> {
         let node = this.root;
 
         while ( node != null ) {
@@ -325,7 +352,7 @@ export class RBTree<T> {
         return node;
     }
 
-    previous ( node : RBNode<T> ) : RBNode<T> {
+    previous ( node: RBNode<T> ): RBNode<T> {
         // If there is a child on the left, we need to get the rightmost child of the left child
         if ( node.left ) {
             node = node.left;
@@ -348,8 +375,8 @@ export class RBTree<T> {
         return node.parent;
     }
 
-    biggestUnder ( upperBound : T, included : boolean = true ) : RBNode<T> {
-        let biggest : RBNode<T> = null;
+    biggestUnder ( upperBound: T, included: boolean = true ): RBNode<T> {
+        let biggest: RBNode<T> = null;
 
         let node = this.root;
 
@@ -362,12 +389,12 @@ export class RBTree<T> {
                 } else {
                     return this.previous( node );
                 }
-            // node.value < bound
+                // node.value < bound
             } else if ( order < 0 ) {
                 biggest = node;
 
                 node = node.right;
-            // node.value > bound
+                // node.value > bound
             } else {
                 node = node.left;
             }
@@ -376,8 +403,12 @@ export class RBTree<T> {
         return biggest;
     }
 
-    smallestAbove ( lowerBound : T, included : boolean = true ) : RBNode<T> {
-        let smallest : RBNode<T> = null;
+    biggestValueUnder ( upperBound: T, included: boolean = true, defaultValue: T = null ): T {
+        return getNodeValue( this.biggestUnder( upperBound, included ), defaultValue );
+    }
+
+    smallestAbove ( lowerBound: T, included: boolean = true ): RBNode<T> {
+        let smallest: RBNode<T> = null;
 
         let node = this.root;
 
@@ -390,10 +421,10 @@ export class RBTree<T> {
                 } else {
                     return this.next( node );
                 }
-            // node.value < bound
+                // node.value < bound
             } else if ( order < 0 ) {
                 node = node.right;
-            // node.value > bound
+                // node.value > bound
             } else {
                 smallest = node;
 
@@ -404,7 +435,11 @@ export class RBTree<T> {
         return smallest;
     }
 
-    smallestUnder ( upperBound : T, included : boolean = true ) : RBNode<T> {
+    smallestValueAbove ( lowerBound: T, included: boolean = true, defaultValue: T = null ): T {
+        return getNodeValue( this.smallestAbove( lowerBound, included ), defaultValue );
+    }
+
+    smallestUnder ( upperBound: T, included: boolean = true ): RBNode<T> {
         const smallest = this.first();
 
         if ( smallest ) {
@@ -418,8 +453,11 @@ export class RBTree<T> {
         return null;
     }
 
-    
-    biggestAbove ( lowerBound : T, included : boolean = true ) : RBNode<T> {
+    smallestValueUnder ( upperBound: T, included: boolean = true, defaultValue: T = null ): T {
+        return getNodeValue( this.smallestUnder( upperBound, included ), defaultValue );
+    }
+
+    biggestAbove ( lowerBound: T, included: boolean = true ): RBNode<T> {
         const biggest = this.last();
 
         if ( biggest ) {
@@ -433,11 +471,19 @@ export class RBTree<T> {
         return null;
     }
 
-    closest ( bound : T ) : [ RBNode<T>, RBNode<T> ] {
+    biggestValueAbove ( lowerBound: T, included: boolean = true, defaultValue: T = null ): T {
+        return getNodeValue( this.biggestAbove( lowerBound, included ), defaultValue );
+    }
+
+    closest ( bound: T ): [ RBNode<T>, RBNode<T> ] {
         return [ this.biggestUnder( bound, false ), this.smallestAbove( bound, false ) ];
     }
 
-    next ( node : RBNode<T> ) : RBNode<T> {
+    closestValues ( bound: T ): [ T, T ] {
+        return [ this.biggestValueUnder( bound, false ), this.smallestValueAbove( bound, false ) ];
+    }
+
+    next ( node: RBNode<T> ): RBNode<T> {
         // If there is a child on the left, we need to get the rightmost child of the left child
         if ( node.right ) {
             node = node.right;
@@ -460,7 +506,7 @@ export class RBTree<T> {
         return node.parent;
     }
 
-    first () {
+    first (): RBNode<T> {
         let node = this.root;
 
         while ( node != null && node.left != null ) {
@@ -470,7 +516,11 @@ export class RBTree<T> {
         return node;
     }
 
-    last () {
+    firstValue ( defaultValue: T = null ): T {
+        return getNodeValue( this.first(), defaultValue );
+    }
+
+    last (): RBNode<T> {
         let node = this.root;
 
         while ( node != null && node.right != null ) {
@@ -480,7 +530,17 @@ export class RBTree<T> {
         return node;
     }
 
-    * [ Symbol.iterator ] () : IterableIterator<RBNode<T>> {
+    lastValue ( defaultValue: T = null ): T {
+        return getNodeValue( this.last(), defaultValue );
+    }
+
+    *[ Symbol.iterator ] (): IterableIterator<T> {
+        for ( let node of this.nodes() ) {
+            yield node.value;
+        }
+    }
+
+    * nodes (): IterableIterator<RBNode<T>> {
         let node = this.first();
 
         while ( node != null ) {
@@ -490,15 +550,9 @@ export class RBTree<T> {
         }
     }
 
-    * values () : IterableIterator<T> {
-        for ( let node of this ) {
-            yield node.value;
-        }
-    }
-
-    * between ( lower : T, upper : T, included : boolean = true ) : IterableIterator<RBNode<T>> {
+    * between ( lower: T, upper: T, included: boolean = true ): IterableIterator<RBNode<T>> {
         if ( this.comparator( lower, upper ) < 0 ) {
-            let lowerNode = this.biggestAbove( lower, true );
+            let lowerNode = this.smallestAbove( lower, true );
 
             while ( lowerNode != null ) {
                 const orderLower = this.comparator( lower, lowerNode.value );
@@ -524,7 +578,7 @@ export class RBTree<T> {
             while ( upperNode != null ) {
                 const orderLower = this.comparator( lower, upperNode.value );
                 const orderUpper = this.comparator( upper, upperNode.value );
-    
+
                 if ( orderLower === 0 && included ) {
                     yield upperNode;
                 } else if ( orderUpper == 0 && included ) {
@@ -534,17 +588,21 @@ export class RBTree<T> {
                 } else if ( orderLower > 0 ) {
                     break;
                 }
-    
+
                 upperNode = this.previous( upperNode );
             }
         }
     }
 
-    print ( node ?: RBNode<T> ) {
-        printTree( 
-            node || this.root, 
-            ( n : RBNode<T> ) => n ? '' + ( n.color == RBColor.Red ? 'R' : 'B' ) + ' ' + n.value + ' ' + ( n.parent ? n.parent.value : 'null' ) : '(null)',
-            ( n : RBNode<T> ) => n ? [ n.left, n.right ] : []
+    * valuesBetween ( lower: T, upper: T, included: boolean = true ): IterableIterator<T> {
+        for ( let node of this.between( lower, upper, included ) ) yield node.value;
+    }
+
+    print ( node?: RBNode<T> ) {
+        printTree(
+            node || this.root,
+            ( n: RBNode<T> ) => n ? '' + ( n.color == RBColor.Red ? 'R' : 'B' ) + ' ' + n.value + ' ' + ( n.parent ? n.parent.value : 'null' ) : '(null)',
+            ( n: RBNode<T> ) => n ? [ n.left, n.right ] : []
         );
     }
 }

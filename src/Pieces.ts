@@ -2,17 +2,17 @@ import { Future } from '@pedromsilva/data-future';
 import { RBTree } from './RBTree';
 
 export interface IRange {
-    start : number;
-    end : number;
+    start: number;
+    end: number;
 }
 
 export class Range implements IRange {
-    start : number;
-    end : number;
+    start: number;
+    end: number;
 
-    constructor ( start : IRange );
-    constructor ( start : number, end : number );
-    constructor ( start : number | IRange, end ?: number ) {
+    constructor ( start: IRange );
+    constructor ( start: number, end: number );
+    constructor ( start: number | IRange, end?: number ) {
         if ( typeof start === 'object' ) {
             end = start.end;
             start = start.start;
@@ -22,29 +22,35 @@ export class Range implements IRange {
         this.end = end;
     }
 
-    get size () : number {
+    get size (): number {
         return this.end - this.start;
     }
 
-    get empty () : boolean {
+    get empty (): boolean {
         return this.end <= this.start;
     }
 
-    union ( range : IRange ) {
+    union ( range: IRange ) {
         return new Range(
             Math.min( this.start, range.start ),
             Math.max( this.end, range.end )
         );
     }
 
-    intersect ( range : IRange ) {
-        return new Range(
+    intersect ( range: IRange ): IRange | null {
+        const intersection = new Range(
             Math.max( this.start, range.start ),
             Math.min( this.end, range.end )
         );
+
+        if ( intersection.start <= intersection.end ) {
+            return intersection;
+        } else {
+            return null;
+        }
     }
 
-    static overlap ( a : IRange, b : IRange ) : boolean {
+    static overlap ( a: IRange, b: IRange ): boolean {
         if ( a.start <= b.start && a.end >= b.start ) {
             return true;
         }
@@ -65,25 +71,30 @@ export class Range implements IRange {
     }
 
     // `ranges` should be a sorted non-overlapping array of ranges
-    static * invert ( ranges : IterableIterator<IRange>, boundaries : IRange ) : IterableIterator<IRange> {
+    static * invert ( ranges: IterableIterator<IRange>, boundaries: IRange ): IterableIterator<IRange> {
+        // Clone the boundaries object so we do not mutate it
+        boundaries = { ...boundaries };
+
         for ( let range of ranges ) {
             if ( boundaries.start < range.start ) {
                 yield { start: boundaries.start, end: range.start - 1 };
+            }
 
+            if ( boundaries.start <= range.start ) {
                 boundaries.start = range.end + 1;
             }
         }
 
-        if ( boundaries.end > boundaries.start ) {
+        if ( boundaries.end >= boundaries.start ) {
             yield { start: boundaries.start, end: boundaries.end };
         }
     }
 
-    static size ( ranges : IterableIterator<IRange> ) : number {
+    static size ( ranges: IterableIterator<IRange> ): number {
         let length = 0;
 
         for ( let range of ranges ) {
-            length += range.end - range.start;
+            length += range.end - range.start + 1;
         }
 
         return length;
@@ -91,13 +102,13 @@ export class Range implements IRange {
 }
 
 export abstract class WatchablePiecesMap {
-    protected watchers : Map<number, Future<void>> = new Map();
+    protected watchers: Map<number, Future<void>> = new Map();
 
-    abstract has ( index : number ) : boolean;
+    abstract has ( index: number ): boolean;
 
-    protected notify ( index : number ) : void {
+    protected notify ( index: number ): void {
         const watcher = this.watchers.get( index );
-    
+
         if ( watcher != null ) {
             this.watchers.delete( index );
 
@@ -105,7 +116,7 @@ export abstract class WatchablePiecesMap {
         }
     }
 
-    acquire ( index : number ) : Promise<void> {
+    acquire ( index: number ): Promise<void> {
         if ( this.has( index ) ) {
             return Promise.resolve( null );
         }
@@ -121,34 +132,34 @@ export abstract class WatchablePiecesMap {
 }
 
 export class PiecesMap<T> extends WatchablePiecesMap {
-    missing : number = 0;
+    missing: number = 0;
 
-    boundaries : Range;
+    boundaries: Range;
 
-    protected _size : number = 0;
+    protected _size: number = 0;
 
-    protected pieces : T[];
+    protected pieces: T[];
 
-    constructor ( size : number ) {
+    constructor ( size: number ) {
         super();
-        
+
         this.size = size;
         this.missing = size;
 
         this.pieces = [];
     }
 
-    get size () : number {
+    get size (): number {
         return this._size;
     }
 
-    set size ( value : number ) {
-        const diff = value - this._size
+    set size ( value: number ) {
+        const diff = value - this._size;
 
         // If diff > 0 then increase missing
         // If diff < 0 then get all pieces available between value and _size and
-            // delete them (shrink array if necessary)
-            // remove them from missing
+        // delete them (shrink array if necessary)
+        // remove them from missing
         if ( diff > 0 ) {
             this.missing += diff;
         } else if ( diff < 0 ) {
@@ -156,25 +167,25 @@ export class PiecesMap<T> extends WatchablePiecesMap {
 
             if ( end > value ) {
                 this.missing -= Range.size( this.available( { start: value, end: end } ) );
-    
+
                 this.pieces.splice( value, end - value );
             }
         }
-        
+
         if ( diff != 0 ) {
             this._size = value;
-    
+
             this.boundaries = new Range( 0, value );
         }
     }
 
-    protected ensurePiecesBuffer ( index : number ) {
+    protected ensurePiecesBuffer ( index: number ) {
         while ( this.pieces.length <= index ) {
             this.pieces.push( null );
         }
     }
 
-    public get ( index : number ) : T {
+    public get ( index: number ): T {
         if ( this.pieces.length <= index ) {
             return null;
         }
@@ -182,7 +193,7 @@ export class PiecesMap<T> extends WatchablePiecesMap {
         return this.pieces[ index ];
     }
 
-    public set ( index : number, value : T ) {
+    public set ( index: number, value: T ) {
         this.ensurePiecesBuffer( index );
 
         if ( this.pieces[ index ] == null && value !== null ) {
@@ -198,11 +209,11 @@ export class PiecesMap<T> extends WatchablePiecesMap {
         }
     }
 
-    public has ( index : number ) : boolean {
+    public has ( index: number ): boolean {
         return this.pieces.length > index && this.pieces[ index ] !== null;
     }
 
-    public delete ( index : number ) {
+    public delete ( index: number ) {
         this.set( index, null );
     }
 
@@ -211,12 +222,12 @@ export class PiecesMap<T> extends WatchablePiecesMap {
         this.pieces = [];
     }
 
-    * available ( limit ?: IRange ) : IterableIterator<IRange> {
+    * available ( limit?: IRange ): IterableIterator<IRange> {
         limit = this.boundaries.intersect( limit || this.boundaries );
 
         let current = limit.start;
 
-        let range : IRange = null;
+        let range: IRange = null;
 
         while ( current < limit.end ) {
             if ( this.has( current ) ) {
@@ -239,13 +250,13 @@ export class PiecesMap<T> extends WatchablePiecesMap {
         }
     }
 
-    empty ( limit ?: IRange ) : IterableIterator<IRange> {
+    empty ( limit?: IRange ): IterableIterator<IRange> {
         return Range.invert( this.available( limit ), this.boundaries.intersect( limit || this.boundaries ) );
     }
 }
 
 export class PiecesSet extends WatchablePiecesMap {
-    constructor ( size : number ) {
+    constructor ( size: number ) {
         super();
 
         this.size = size;
@@ -256,11 +267,11 @@ export class PiecesSet extends WatchablePiecesMap {
 
     missing: number;
 
-    protected tree : RBTree<IRange> = new RBTree( ( a, b ) => Range.overlap( a, b ) ? 0 : a.start - b.start );
-    
-    protected tmpRange : Range = new Range( 0, 0 );
+    protected tree: RBTree<IRange> = new RBTree( ( a, b ) => Range.overlap( a, b ) ? 0 : a.start - b.start );
 
-    add ( index : number ) : void {
+    protected tmpRange: Range = new Range( 0, 0 );
+
+    add ( index: number ): void {
         this.tmpRange.start = index;
         this.tmpRange.end = index;
 
@@ -268,28 +279,28 @@ export class PiecesSet extends WatchablePiecesMap {
 
         if ( !match ) {
             const [ lower, upper ] = this.tree.closest( this.tmpRange );
-    
+
             if ( lower && upper && lower.value.end == index - 1 && upper.value.start == index + 1 ) {
                 const end = upper.value.end;
-                
+
                 this.tree.delete( upper.value );
-                
+
                 lower.value.end = end;
             } else if ( lower && lower.value.end == index - 1 ) {
                 lower.value.end = index;
             } else if ( upper && upper.value.start == index + 1 ) {
                 upper.value.start = index;
-            } else if ( ( !lower || lower.value.end < index  - 1 ) && ( !upper || upper.value.start > index + 1 ) ) {
+            } else if ( ( !lower || lower.value.end < index - 1 ) && ( !upper || upper.value.start > index + 1 ) ) {
                 this.tree.insert( { start: index, end: index } );
             }
 
             this.missing--;
-                
+
             this.notify( index );
         }
     }
 
-    has ( index : number ) : boolean {
+    has ( index: number ): boolean {
         this.tmpRange.start = index;
         this.tmpRange.end = index;
 
@@ -301,7 +312,7 @@ export class PiecesSet extends WatchablePiecesMap {
         return inLower || inUpper;
     }
 
-    delete ( index : number ) : void {
+    delete ( index: number ): void {
         this.tmpRange.start = index;
         this.tmpRange.end = index;
 
@@ -326,13 +337,13 @@ export class PiecesSet extends WatchablePiecesMap {
         }
     }
 
-    clear () : void {
+    clear (): void {
         this.tree.clear();
 
         this.missing = this.size;
     }
 
-    groupOf ( index : number ) : [ boolean, IRange ] {
+    groupOf ( index: number ): [ boolean, IRange ] {
         this.tmpRange.start = index;
         this.tmpRange.end = index;
 
@@ -357,63 +368,65 @@ export class PiecesSet extends WatchablePiecesMap {
         }
     }
 
-    * available ( limit ?: IRange ) : IterableIterator<IRange> {
-        limit = limit || { start: 0, end: this.size };
+    * available ( limit?: IRange ): IterableIterator<IRange> {
+        limit = limit || { start: 0, end: this.size - 1 };
 
         const start = { start: limit.start, end: limit.start };
         const end = { start: limit.end, end: limit.end };
-        
+
         for ( let node of this.tree.between( start, end ) ) {
-            yield { 
-                start: Math.max( limit.start, node.value.start ), 
-                end: Math.min( limit.end, node.value.end ) 
+            yield {
+                start: Math.max( limit.start, node.value.start ),
+                end: Math.min( limit.end, node.value.end )
             };
         }
     }
 
-    empty ( limit ?: IRange ) : IterableIterator<IRange> {
-        const boundaries = new Range( 0, this.size );
+    empty ( limit?: IRange ): IterableIterator<IRange> {
+        const boundaries = new Range( 0, this.size - 1 );
 
-        return Range.invert( this.available(), boundaries.intersect( limit || boundaries ) );
+        limit = boundaries.intersect( limit || boundaries );
+
+        return Range.invert( this.available( limit ), limit );
     }
 }
 
 export class PiecesTable<T> {
-    protected piecesMap : PiecesMap<T>;
-    protected piecesSet : PiecesSet;
+    protected piecesMap: PiecesMap<T>;
+    protected piecesSet: PiecesSet;
 
-    constructor ( size : number ) {
+    constructor ( size: number ) {
         this.piecesMap = new PiecesMap( size );
         this.piecesSet = new PiecesSet( size );
     }
 
-    get size () : number {
+    get size (): number {
         return this.piecesMap.size;
     }
 
-    set size ( value : number ) {
+    set size ( value: number ) {
         this.piecesMap.size = value;
         this.piecesSet.size = value;
     }
 
-    get missing () : number {
+    get missing (): number {
         return this.piecesMap.missing;
     }
 
-    get ( index : number ) : T {
+    get ( index: number ): T {
         return this.piecesMap.get( index );
     }
 
-    set ( index : number, value : T ) {
+    set ( index: number, value: T ) {
         this.piecesSet.add( index );
         this.piecesMap.set( index, value );
     }
 
-    has ( index : number ) : boolean {
+    has ( index: number ): boolean {
         return this.piecesMap.has( index );
     }
 
-    delete ( index : number ) {
+    delete ( index: number ) {
         this.piecesSet.delete( index );
         this.piecesMap.delete( index );
     }
@@ -423,19 +436,19 @@ export class PiecesTable<T> {
         this.piecesMap.clear();
     }
 
-    acquire ( index : number ) : Promise<void> {
+    acquire ( index: number ): Promise<void> {
         return this.piecesMap.acquire( index );
     }
 
-    groupOf ( index : number ) : [ boolean, IRange ] {
+    groupOf ( index: number ): [ boolean, IRange ] {
         return this.piecesSet.groupOf( index );
     }
 
-    available ( limit ?: IRange ) : IterableIterator<IRange> {
+    available ( limit?: IRange ): IterableIterator<IRange> {
         return this.piecesSet.available( limit );
     }
 
-    empty ( limit ?: IRange ) : IterableIterator<IRange> {
+    empty ( limit?: IRange ): IterableIterator<IRange> {
         return this.piecesSet.empty( limit );
     }
 }
