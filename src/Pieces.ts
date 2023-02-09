@@ -393,6 +393,50 @@ export class PiecesSet extends WatchablePiecesMap {
     [ Symbol.iterator ] () {
         return this.tree[ Symbol.iterator ]();
     }
+
+    export (): IRange[] {
+        return Array.from( this );
+    }
+
+    import ( ranges: IRange[], validate: boolean = true ): void {
+        if ( ranges == null ) {
+            throw new Error( `Parameter "ranges" should not be null or undefined.` );
+        }
+
+        let rangesSizes: number = 0;
+
+        if ( validate ) {
+            let lastEnd: number = 0;
+
+            for ( const range of ranges ) {
+                if ( range.start < 0 || range.end < 0 ) {
+                    throw new Error( `Cannot import ranges with negative positions.` );
+                }
+
+                if ( range.end < range.start ) {
+                    throw new Error( `Cannot import ranges with segments where the "end" smaller than "start".` );
+                }
+
+                if ( range.start < lastEnd ) {
+                    throw new Error( `Cannot import ranges with that start before the previous segment ends.` );
+                }
+
+                if ( range.end > this.size ) {
+                    throw new Error( `Cannot import ranges with positions greater than the size of the piece set.` );
+                }
+
+                lastEnd = range.end;
+
+                rangesSizes += range.end - range.start + 1;
+            }
+        }
+
+        for ( const segment of ranges ) {
+            this.tree.insert( segment );
+        }
+
+        this.missing = this.size - rangesSizes;
+    }
 }
 
 export class PiecesTable<T> {

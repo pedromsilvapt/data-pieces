@@ -249,4 +249,55 @@ test( 'PiecesSet', t => {
             t.end();
         } );
     } );
+
+    t.test( '#import', t => {
+        t.test( 'empty', t => {
+            const set = new PiecesSet( 6 );
+
+            set.import( set.export() );
+
+            t.equals( set.missing, 6, 'missing should be all pieces' );
+            t.equals( Array.from( set ).length, 0, 'set should be empty' );
+            t.end();
+        } );
+
+        t.test( 'full', t => {
+            const set = new PiecesSet( 6 );
+
+            for ( let i = 0; i < 6; i++ ) set.add( i );
+
+            const exported = set.export();
+
+            set.clear();
+
+            set.import( exported );
+
+            const segments = Array.from( set );
+
+            t.equals( set.missing, 0, 'missing should be all pieces' );
+            t.equals( segments.length, 1, 'set should be empty' );
+            t.end();
+        } );
+
+        t.test( 'partial', t => {
+            const set = new PiecesSet( 6 );
+
+            set.add( 0 );
+            set.add( 2 );
+            set.add( 3 );
+            set.add( 5 );
+
+            const exported = set.export();
+
+            set.clear();
+
+            set.import( exported );
+
+            const segments = Array.from( set );
+
+            t.equals( set.missing, 2, 'missing should be all pieces' );
+            t.equals( segments.length, 3, 'set should be empty' );
+            t.end();
+        } );
+    } );
 } );
